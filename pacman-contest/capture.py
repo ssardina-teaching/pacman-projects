@@ -804,6 +804,8 @@ def readCommand( argv ):
                     help='Writes game histories to a file (named by the time they were played)', default=False)
   parser.add_option('--replay', default=None,
                     help='Replays a recorded game file.')
+  parser.add_option('--replay-delay', type='float', dest='delay',
+                    help=default('Delay step in a replay'), default=0.03)
   parser.add_option('-x', '--numTraining', dest='numTraining', type='int',
                     help=default('How many episodes are training (suppresses output)'), default=0)
   parser.add_option('-c', '--catchExceptions', action='store_true', default=False,
@@ -847,6 +849,10 @@ def readCommand( argv ):
     import cPickle
     recorded = cPickle.load(open(options.replay))
     recorded['display'] = args['display']
+    recorded['delay'] = options.delay
+    recorded['redTeamName'] = options.red
+    recorded['blueTeamName'] = options.blue
+
     replayGame(**recorded)
     sys.exit(0)
 
@@ -862,6 +868,13 @@ def readCommand( argv ):
   blueAgents = loadAgents(False, options.blue, nokeyboard, blueArgs)
   args['agents'] = sum([list(el) for el in zip(redAgents, blueAgents)],[]) # list of agents
 
+  if None in blueAgents or None in redAgents:
+    if None in blueAgents:
+      print '\nBlue team failed to load!\n'
+    if None in redAgents:
+      print '\nRed team failed to load!\n'
+    raise Exception('No teams found!')
+  
   numKeyboardAgents = 0
   for index, val in enumerate([options.keys0, options.keys1, options.keys2, options.keys3]):
     if not val: continue
@@ -913,8 +926,13 @@ def loadAgents(isRed, factory, textgraphics, cmdLineArgs):
     if not factory.endswith(".py"):
       factory += ".py"
 
+    print factory
     module = imp.load_source('player' + str(int(isRed)), factory)
   except (NameError, ImportError):
+    print >>sys.stderr, 'Error: The team "' + factory + '" could not be loaded! '
+    traceback.print_exc()
+    return [None for i in range(2)]
+  except IOError:
     print >>sys.stderr, 'Error: The team "' + factory + '" could not be loaded! '
     traceback.print_exc()
     return [None for i in range(2)]
@@ -941,7 +959,7 @@ def loadAgents(isRed, factory, textgraphics, cmdLineArgs):
   indices = [2*i + indexAddend for i in range(2)]
   return createTeamFunc(indices[0], indices[1], isRed, **args)
 
-def replayGame( layout, agents, actions, display, length, redTeamName, blueTeamName ):
+def replayGame( layout, agents, actions, display, length, redTeamName, blueTeamName, delay=1):
     rules = CaptureRules()
     game = rules.newGame( layout, agents, display, length, False, False )
     state = game.state
@@ -956,6 +974,13 @@ def replayGame( layout, agents, actions, display, length, redTeamName, blueTeamN
       display.update( state.data )
       # Allow for game specific conditions (winning, losing, etc.)
       rules.process(state, game)
+      time.sleep(delay)
+
+    print("END")
+    try:
+      wait = input("PRESS ENTER TO CONTINUE")
+    except:
+      print("END")
 
     display.finish()
 
@@ -1024,5 +1049,7 @@ if __name__ == '__main__':
   games = runGames(**options)
 
   save_score(games[0])
+
+  
   # import cProfile
   # cProfile.run('runGames( **options )', 'profile')
