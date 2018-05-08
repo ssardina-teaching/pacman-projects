@@ -901,7 +901,7 @@ class GridPolicyTest(testClasses.TestCase):
 
     def printPolicy(self, policy, policyTypeIsGrid):
         if policyTypeIsGrid:
-            legend = {'N': 'N', 'E': 'E', 'S': 'S', 'W': 'W', ' ': '_'}
+            legend = {'N': 'N', 'E': 'E', 'S': 'S', 'W': 'W', ' ': '_', 'X': 'X', '.': '.'}
         else:
             legend = {'north': 'N', 'east': 'E', 'south': 'S', 'west': 'W', 'exit': 'X', '.': '.', ' ': '_'}
 
